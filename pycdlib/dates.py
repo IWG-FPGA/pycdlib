@@ -97,7 +97,7 @@ class DirectoryRecordDate(object):
 
         self._initialized = True
 
-    def new(self):
+    def new(self, files_date):
         # type: () -> None
         '''
         Create a new Directory Record date based on the current time.
@@ -112,7 +112,9 @@ class DirectoryRecordDate(object):
 
         # This algorithm was ported from cdrkit, genisoimage.c:iso9660_date()
         tm = time.time()
-        local = time.localtime(tm)
+        if files_date:
+            tm = files_date.timestamp()
+        local = time.gmtime(tm)
         self.years_since_1900 = local.tm_year - 1900
         self.month = local.tm_mon
         self.day_of_month = local.tm_mday
@@ -120,6 +122,7 @@ class DirectoryRecordDate(object):
         self.minute = local.tm_min
         self.second = local.tm_sec
         self.gmtoffset = utils.gmtoffset_from_tm(tm, local)
+        self.gmtoffset = 0
         self._initialized = True
 
     def record(self):

@@ -204,8 +204,8 @@ class PrimaryOrSupplementaryVD(object):
     def new(self, flags, sys_ident, vol_ident, set_size, seqnum, log_block_size,
             vol_set_ident, pub_ident_str, preparer_ident_str, app_ident_str,
             copyright_file, abstract_file, bibli_file, vol_expire_date,
-            app_use, xa, version, escape_sequence):
-        # type: (int, bytes, bytes, int, int, int, bytes, bytes, bytes, bytes, bytes, bytes, bytes, float, bytes, bool, int, bytes) -> None
+            app_use, xa, version, escape_sequence, files_date):
+        # type: (int, bytes, bytes, int, int, int, bytes, bytes, bytes, bytes, bytes, bytes, bytes, float, bytes, bool, int, bytes, datetime) -> None
         '''
         Create a new Volume Descriptor.
 
@@ -296,7 +296,7 @@ class PrimaryOrSupplementaryVD(object):
         # FIXME: we don't support the optional path table location right now
         self.optional_path_table_location_le = 0
         self.optional_path_table_location_be = 0
-        self.root_dir_record.new_root(self, seqnum, self.log_block_size)
+        self.root_dir_record.new_root(self, seqnum, self.log_block_size, files_date)
 
         if len(vol_set_ident) > 128:
             raise pycdlibexception.PyCdlibInvalidInput('The maximum length for the volume set identifier is 128')
@@ -398,7 +398,7 @@ class PrimaryOrSupplementaryVD(object):
 
         self._initialized = True
 
-    def record(self):
+    def record(self, files_date):
         # type: () -> bytes
         '''
         Generate the string representing this Volume Descriptor.
@@ -437,7 +437,7 @@ class PrimaryOrSupplementaryVD(object):
                            self.optional_path_table_location_le,
                            utils.swab_32bit(self.path_table_location_be),
                            self.optional_path_table_location_be,
-                           self.root_dir_record.record(),
+                           self.root_dir_record.record(files_date),
                            self.volume_set_identifier,
                            self.publisher_identifier.record(),
                            self.preparer_identifier.record(),
@@ -751,8 +751,8 @@ class PrimaryOrSupplementaryVD(object):
 def pvd_factory(sys_ident, vol_ident, set_size, seqnum, log_block_size,
                 vol_set_ident, pub_ident_str, preparer_ident_str,
                 app_ident_str, copyright_file, abstract_file, bibli_file,
-                vol_expire_date, app_use, xa):
-    # type: (bytes, bytes, int, int, int, bytes, bytes, bytes, bytes, bytes, bytes, bytes, float, bytes, bool) -> PrimaryOrSupplementaryVD
+                vol_expire_date, app_use, xa, files_date):
+    # type: (bytes, bytes, int, int, int, bytes, bytes, bytes, bytes, bytes, bytes, bytes, float, bytes, bool, datetime) -> PrimaryOrSupplementaryVD
     '''
     An internal function to create a Primary Volume Descriptor.
 
@@ -786,7 +786,7 @@ def pvd_factory(sys_ident, vol_ident, set_size, seqnum, log_block_size,
     pvd.new(0, sys_ident, vol_ident, set_size, seqnum, log_block_size,
             vol_set_ident, pub_ident_str, preparer_ident_str,
             app_ident_str, copyright_file, abstract_file, bibli_file,
-            vol_expire_date, app_use, xa, 1, b'')
+            vol_expire_date, app_use, xa, 1, b'', files_date)
     return pvd
 
 

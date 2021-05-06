@@ -1108,7 +1108,7 @@ class UDFTimestamp(object):
                            self.centiseconds, self.hundreds_microseconds,
                            self.microseconds)
 
-    def new(self):
+    def new(self, files_date):
         # type: () -> None
         '''
         Create a new UDF Timestamp.
@@ -1122,12 +1122,14 @@ class UDFTimestamp(object):
             raise pycdlibexception.PyCdlibInternalError('UDF Timestamp already initialized')
 
         tm = time.time()
-        local = time.localtime(tm)
+        if files_date:
+            tm = files_date.timestamp()
+        local = time.gmtime(tm)
 
         self.tz = utils.gmtoffset_from_tm(tm, local)
         # FIXME: for the timetype, 0 is UTC, 1 is local, 2 is 'agreement'.
         # let the user set this.
-        self.timetype = 1
+        self.timetype = 0
         self.year = local.tm_year
         self.month = local.tm_mon
         self.day = local.tm_mday
@@ -1526,7 +1528,7 @@ class UDFPrimaryVolumeDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self):
+    def new(self, files_date, vol_ident):
         # type: () -> None
         '''
         Create a new UDF Primary Volume Descriptor.
@@ -1544,7 +1546,7 @@ class UDFPrimaryVolumeDescriptor(object):
 
         self.vol_desc_seqnum = 0  # FIXME: let the user set this
         self.desc_num = 0  # FIXME: let the user set this
-        self.vol_ident = _ostaunicode_zero_pad('CDROM', 32)
+        self.vol_ident = _ostaunicode_zero_pad(vol_ident.decode('utf-8'), 32)
         # According to UDF 2.60, 2.2.2.5, the VolumeSetIdentifier should have
         # at least the first 16 characters be a unique value.  Further, the
         # first 8 bytes of that should be a time value in ASCII hexadecimal
@@ -1563,7 +1565,7 @@ class UDFPrimaryVolumeDescriptor(object):
         self.app_ident = UDFEntityID()
         self.app_ident.new(0)
         self.recording_date = UDFTimestamp()
-        self.recording_date.new()
+        self.recording_date.new(files_date)
         self.impl_ident = UDFEntityID()
         self.impl_ident.new(0, b'*pycdlib')
         self.implementation_use = b'\x00' * 64  # FIXME: let the user set this
@@ -1671,7 +1673,7 @@ class UDFImplementationUseVolumeDescriptorImplementationUse(object):
                            self.lv_info1, self.lv_info2, self.lv_info3,
                            self.impl_ident.record(), self.impl_use)
 
-    def new(self):
+    def new(self, vol_ident):
         # type: () -> None
         '''
         Create a new UDF Implementation Use Volume Descriptor Implementation Use
@@ -1687,7 +1689,7 @@ class UDFImplementationUseVolumeDescriptorImplementationUse(object):
 
         self.char_set = UDFCharspec()
         self.char_set.new(0, b'OSTA Compressed Unicode')  # FIXME: let the user set this
-        self.log_vol_ident = _ostaunicode_zero_pad('CDROM', 128)
+        self.log_vol_ident = _ostaunicode_zero_pad(vol_ident.decode('utf-8'), 128)
         self.lv_info1 = b'\x00' * 36
         self.lv_info2 = b'\x00' * 36
         self.lv_info3 = b'\x00' * 36
@@ -1796,7 +1798,7 @@ class UDFImplementationUseVolumeDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self):
+    def new(self, vol_ident):
         # type: () -> None
         '''
         Create a new UDF Implementation Use Volume Descriptor.
@@ -1818,7 +1820,7 @@ class UDFImplementationUseVolumeDescriptor(object):
         self.impl_ident.new(0, b'*UDF LV Info', b'\x02\x01')
 
         self.impl_use = UDFImplementationUseVolumeDescriptorImplementationUse()
-        self.impl_use.new()
+        self.impl_use.new(vol_ident)
 
         self._initialized = True
 
@@ -2883,7 +2885,7 @@ class UDFLogicalVolumeDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self):
+    def new(self, vol_ident):
         # type: () -> None
         '''
         Create a new UDF Logical Volume Descriptor.
@@ -2903,7 +2905,7 @@ class UDFLogicalVolumeDescriptor(object):
         self.desc_char_set = UDFCharspec()
         self.desc_char_set.new(0, b'OSTA Compressed Unicode')  # FIXME: let the user set this
 
-        self.logical_vol_ident = _ostaunicode_zero_pad('CDROM', 128)
+        self.logical_vol_ident = _ostaunicode_zero_pad(vol_ident.decode('utf-8'), 128)
 
         self.domain_ident = UDFEntityID()
         self.domain_ident.new(0, b'*OSTA UDF Compliant', b'\x02\x01\x03')
@@ -3513,7 +3515,7 @@ class UDFLogicalVolumeIntegrityDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self):
+    def new(self, files_date):
         # type: () -> None
         '''
         Create a new UDF Logical Volume Integrity Descriptor.
@@ -3530,7 +3532,7 @@ class UDFLogicalVolumeIntegrityDescriptor(object):
         self.desc_tag.new(9)  # FIXME: let the user set serial_number
 
         self.recording_date = UDFTimestamp()
-        self.recording_date.new()
+        self.recording_date.new(files_date)
 
         self.integrity_type = 1  # FIXME: let the user set this
 
@@ -3687,7 +3689,7 @@ class UDFFileSetDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self):
+    def new(self, files_date, vol_ident):
         # type: () -> None
         '''
         Create a new UDF File Set Descriptor.
@@ -3704,7 +3706,7 @@ class UDFFileSetDescriptor(object):
         self.desc_tag.new(256)  # FIXME: let the user set serial_number
 
         self.recording_date = UDFTimestamp()
-        self.recording_date.new()
+        self.recording_date.new(files_date)
 
         self.domain_ident = UDFEntityID()
         self.domain_ident.new(0, b'*OSTA UDF Compliant', b'\x02\x01\x03')
@@ -3715,10 +3717,10 @@ class UDFFileSetDescriptor(object):
         self.file_set_num = 0
         self.log_vol_char_set = UDFCharspec()
         self.log_vol_char_set.new(0, b'OSTA Compressed Unicode')  # FIXME: let the user set this
-        self.log_vol_ident = _ostaunicode_zero_pad('CDROM', 128)
+        self.log_vol_ident = _ostaunicode_zero_pad(vol_ident.decode('utf-8'), 128)
         self.file_set_char_set = UDFCharspec()
         self.file_set_char_set.new(0, b'OSTA Compressed Unicode')  # FIXME: let the user set this
-        self.file_set_ident = _ostaunicode_zero_pad('CDROM', 32)
+        self.file_set_ident = _ostaunicode_zero_pad(vol_ident.decode('utf-8'), 32)
         self.copyright_file_ident = b'\x00' * 32  # FIXME: let the user set this
         self.abstract_file_ident = b'\x00' * 32  # FIXME: let the user set this
 
@@ -4045,8 +4047,8 @@ class UDFFileEntry(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self, length, file_type, parent, log_block_size):
-        # type: (int, str, Optional[UDFFileEntry], int) -> None
+    def new(self, length, file_type, parent, log_block_size, files_date):
+        # type: (int, str, Optional[UDFFileEntry], int, datetime) -> None
         '''
         Create a new UDF File Entry.
 
@@ -4107,13 +4109,13 @@ class UDFFileEntry(object):
                 len_left -= alloc_len
 
         self.access_time = UDFTimestamp()
-        self.access_time.new()
+        self.access_time.new(files_date)
 
         self.mod_time = UDFTimestamp()
-        self.mod_time.new()
+        self.mod_time.new(files_date)
 
         self.attr_time = UDFTimestamp()
-        self.attr_time.new()
+        self.attr_time.new(files_date)
 
         self.extended_attr_icb = UDFLongAD()
         self.extended_attr_icb.new(0, 0)

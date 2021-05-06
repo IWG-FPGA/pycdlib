@@ -25,6 +25,7 @@ from __future__ import print_function
 
 import argparse
 import collections
+import datetime
 import fileinput
 import fnmatch
 import os
@@ -457,6 +458,7 @@ def parse_arguments():
     parser.add_argument('-no-hfs', help='Do not create ISO9660/HFS hybrid', action='store_true')
     parser.add_argument('-scan-for-duplicates', help='Aggressively try to find duplicate files to reduce size (very slow!)', action='store_true')
     parser.add_argument('paths', help='Paths to get data from', action='store', nargs=argparse.REMAINDER)
+    parser.add_argument('-files-date', help='Set the modification date field of the PVD', action='store', default=None)
     return parser.parse_args()
 
 
@@ -688,6 +690,10 @@ def main():
     if args.hide_rr_moved:
         iso.set_relocated_name('_RR_MOVE', '.rr_moved')
 
+    files_date = None
+    if args.files_date:
+        files_date = datetime.datetime.fromisoformat(args.files_date)
+
     # Create a new ISO.
     iso.new(interchange_level=args.iso_level,
             sys_ident=args.sysid,
@@ -704,7 +710,8 @@ def main():
             joliet=joliet_level,
             rock_ridge=rock_version,
             xa=(args.XA or args.xa),
-            udf=udf_version)
+            udf=udf_version,
+            files_date=files_date)
 
     path_list = args.paths
 
