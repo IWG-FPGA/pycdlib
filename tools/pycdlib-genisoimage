@@ -372,6 +372,7 @@ def parse_arguments():
     parser.add_argument('-table-name', help='Translation table file name', action='store')
     parser.add_argument('-ucs-level', help='Set Joliet UCS level (1..3)', action='store')
     parser.add_argument('-udf', help='Generate UDF file system', action='store_true')
+    parser.add_argument('-keep-date', help='Generate UDF file system', action='store_true', default=False)
     parser.add_argument('-dvd-video', help='Generate DVD-Video compliant UDF file system', action='store_true')
     parser.add_argument('-uid', help='Make the owner of all files this uid', action='store')
     parser.add_argument('-untranslated-filenames', '-U', help='Allow Untranslated filenames (for HPUX & AIX - violates ISO9660).  Forces -l, -d, -N, -allow-leading-dots, -relaxed-filenames, -allow-lowercase, -allow-multidot', action='store_true')
@@ -694,6 +695,10 @@ def main():
     if args.files_date:
         files_date = datetime.datetime.fromisoformat(args.files_date)
 
+    keep_date = False
+    if args.keep_date:
+        keep_date = True
+
     # Create a new ISO.
     iso.new(interchange_level=args.iso_level,
             sys_ident=args.sysid,
@@ -711,7 +716,8 @@ def main():
             rock_ridge=rock_version,
             xa=(args.XA or args.xa),
             udf=udf_version,
-            files_date=files_date)
+            files_date=files_date,
+            keep_date=keep_date)
 
     path_list = args.paths
 

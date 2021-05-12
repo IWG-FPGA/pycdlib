@@ -588,7 +588,7 @@ class PyCdlib(object):
                  'udf_logical_volume_integrity', 'udf_boots',
                  'udf_logical_volume_integrity_terminator', 'udf_root',
                  'udf_file_set', 'udf_file_set_terminator', 'inodes',
-                 'logical_block_size', 'files_date')
+                 'logical_block_size', 'files_date', 'keep_date')
 
     class _UDFDescriptorSequence(object):
         '''
@@ -684,6 +684,7 @@ class PyCdlib(object):
         self.logical_block_size = 2048
         self.interchange_level = 1  # type: int
         self.files_date = None
+        self.keep_date = False
 
     def _parse_volume_descriptors(self):
         # type: () -> None
@@ -2850,7 +2851,7 @@ class PyCdlib(object):
             dir_extent = curr.extent_location()
             for child in curr.children:
                 # First write out the directory record entry for all children.
-                recstr = child.record(self.files_date)
+                recstr = child.record(self.files_date, self.keep_date)
                 if (curr_dirrecord_offset + len(recstr)) > self.logical_block_size:
                     dir_extent += 1
                     curr_dirrecord_offset = 0
@@ -2967,7 +2968,7 @@ class PyCdlib(object):
 
         # First write out the PVDs.
         for pvd in self.pvds:
-            rec = pvd.record(self.files_date)
+            rec = pvd.record(self.files_date, self.keep_date)
             self._outfp_write_with_check(outfp, rec)
             progress.call(len(rec))
 
@@ -3308,7 +3309,7 @@ class PyCdlib(object):
 
             new_rec = dr.DirectoryRecord()
             new_rec.new_file(vd, length, new_name, new_parent,
-                             vd.sequence_number(), rr, rr_name, xa, file_mode, self.files_date)
+                             vd.sequence_number(), rr, rr_name, xa, file_mode, self.files_date, self.keep_date)
 
             num_bytes_to_add += self._add_child_to_dr(new_rec)
             num_bytes_to_add += self._update_rr_ce_entry(new_rec)
@@ -3326,7 +3327,7 @@ class PyCdlib(object):
             num_bytes_to_add += num_new_extents * self.logical_block_size
 
             file_entry = udfmod.UDFFileEntry()
-            file_entry.new(length, 'file', udf_parent, self.logical_block_size, self.files_date)
+            file_entry.new(length, 'file', udf_parent, self.logical_block_size, self.files_date, self.keep_date)
             file_ident.file_entry = file_entry
             file_entry.file_ident = file_ident
             if data_ino is None or data_ino.num_udf == 0:
@@ -3857,7 +3858,7 @@ class PyCdlib(object):
 
         return num_bytes_to_remove
 
-    def _create_dot(self, vd, parent, rock_ridge, xa, file_mode, files_date):
+    def _create_dot(self, vd, parent, rock_ridge, xa, file_mode, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, dr.DirectoryRecord, str, bool, int, datetime) -> None
         '''
         An internal method to create a new 'dot' Directory Record.
@@ -3873,10 +3874,10 @@ class PyCdlib(object):
         '''
         dot = dr.DirectoryRecord()
         dot.new_dot(vd, parent, vd.sequence_number(), rock_ridge,
-                    vd.logical_block_size(), xa, file_mode, files_date)
+                    vd.logical_block_size(), xa, file_mode, files_date, keep_date)
         self._add_child_to_dr(dot)
 
-    def _create_dotdot(self, vd, parent, rock_ridge, relocated, xa, file_mode, files_date):
+    def _create_dotdot(self, vd, parent, rock_ridge, relocated, xa, file_mode, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, dr.DirectoryRecord, str, bool, bool, int, datetime) -> dr.DirectoryRecord
         '''
         An internal method to create a new 'dotdot' Directory Record.
@@ -3893,7 +3894,7 @@ class PyCdlib(object):
         '''
         dotdot = dr.DirectoryRecord()
         dotdot.new_dotdot(vd, parent, vd.sequence_number(), rock_ridge,
-                          vd.logical_block_size(), relocated, xa, file_mode, files_date)
+                          vd.logical_block_size(), relocated, xa, file_mode, files_date, keep_date)
         self._add_child_to_dr(dotdot)
         return dotdot
 
@@ -3912,7 +3913,7 @@ class PyCdlib(object):
             seqnum=1, log_block_size=2048, vol_set_ident=' ', pub_ident_str='',
             preparer_ident_str='', app_ident_str='', copyright_file='',
             abstract_file='', bibli_file='', vol_expire_date=None, app_use='',
-            joliet=None, rock_ridge=None, xa=False, udf=None, files_date=None):
+            joliet=None, rock_ridge=None, xa=False, udf=None, files_date=None, keep_date=False):
         # type: (int, str, str, int, int, int, str, str, str, str, str, str, str, Optional[float], str, Optional[int], Optional[str], bool, Optional[str]) -> None, Optional[str]) -> None
         '''
         Create a new ISO from scratch.
@@ -3981,6 +3982,7 @@ class PyCdlib(object):
         self.xa = xa
 
         self.files_date = files_date
+        self.keep_date = keep_date
 
         if isinstance(joliet, bool):
             if joliet:
@@ -4014,7 +4016,7 @@ class PyCdlib(object):
                                         preparer_ident_bytes, app_ident_bytes,
                                         copyright_file_bytes,
                                         abstract_file_bytes, bibli_file_bytes,
-                                        real_vol_expire_date, app_use_bytes, xa, files_date)
+                                        real_vol_expire_date, app_use_bytes, xa, files_date, keep_date)
         self.pvds.append(self.pvd)
 
         self.logical_block_size = self.pvd.logical_block_size()
@@ -4087,7 +4089,7 @@ class PyCdlib(object):
 
             # Create the Main Volume Descriptor Sequence.
             pvd = udfmod.UDFPrimaryVolumeDescriptor()
-            pvd.new(self.files_date, vol_set_ident_bytes)
+            pvd.new(self.files_date, self.keep_date, vol_set_ident_bytes)
             self.udf_main_descs.pvds.append(pvd)
 
             impl_use = udfmod.UDFImplementationUseVolumeDescriptor()
@@ -4113,7 +4115,7 @@ class PyCdlib(object):
 
             # Create the Reserve Volume Descriptor Sequence.
             reserve_pvd = udfmod.UDFPrimaryVolumeDescriptor()
-            reserve_pvd.new(self.files_date, vol_set_ident_bytes)
+            reserve_pvd.new(self.files_date, self.keep_date, vol_set_ident_bytes)
             self.udf_reserve_descs.pvds.append(reserve_pvd)
 
             reserve_impl_use = udfmod.UDFImplementationUseVolumeDescriptor()
@@ -4139,7 +4141,7 @@ class PyCdlib(object):
 
             # Create the Logical Volume Integrity Sequence.
             self.udf_logical_volume_integrity = udfmod.UDFLogicalVolumeIntegrityDescriptor()
-            self.udf_logical_volume_integrity.new(self.files_date)
+            self.udf_logical_volume_integrity.new(self.files_date, self.keep_date)
 
             self.udf_logical_volume_integrity_terminator = udfmod.UDFTerminatingDescriptor()
             self.udf_logical_volume_integrity_terminator.new()
@@ -4154,7 +4156,7 @@ class PyCdlib(object):
             num_bytes_to_add += self.logical_block_size
 
             # Create the File Set
-            self.udf_file_set.new(self.files_date, vol_set_ident_bytes)
+            self.udf_file_set.new(self.files_date, self.keep_date, vol_set_ident_bytes)
 
             self.udf_file_set_terminator = udfmod.UDFTerminatingDescriptor()
             self.udf_file_set_terminator.new()
@@ -4163,7 +4165,7 @@ class PyCdlib(object):
 
             # Create the root directory, and the 'parent' entry inside.
             self.udf_root = udfmod.UDFFileEntry()
-            self.udf_root.new(0, 'dir', None, self.logical_block_size, self.files_date)
+            self.udf_root.new(0, 'dir', None, self.logical_block_size, self.files_date, self.keep_date)
             num_bytes_to_add += self.logical_block_size
 
             parent = udfmod.UDFFileIdentifierDescriptor()
@@ -4184,9 +4186,9 @@ class PyCdlib(object):
         num_partition_bytes_to_add += self.logical_block_size
 
         self._create_dot(self.pvd, self.pvd.root_directory_record(),
-                         self.rock_ridge, self.xa, 0o040555, files_date)
+                         self.rock_ridge, self.xa, 0o040555, files_date, self.keep_date)
         self._create_dotdot(self.pvd, self.pvd.root_directory_record(),
-                            self.rock_ridge, False, self.xa, 0o040555, files_date)
+                            self.rock_ridge, False, self.xa, 0o040555, files_date, self.keep_date)
 
         if self.joliet_vd is not None:
             # Create the PTR, and add the 4 extents that comprise of the LE PTR
@@ -4932,7 +4934,7 @@ class PyCdlib(object):
             rec.new_dir(self.pvd, iso9660_name, parent,
                         self.pvd.sequence_number(), self.rock_ridge, new_rr_name,
                         self.logical_block_size, False, relocated,
-                        self.xa, file_mode, self.files_date)
+                        self.xa, file_mode, self.files_date, self.keep_date)
             num_bytes_to_add += self._add_child_to_dr(rec)
             if rec.rock_ridge is not None:
                 if relocated and fake_dir_rec is not None and fake_dir_rec.rock_ridge is not None:
@@ -4940,7 +4942,7 @@ class PyCdlib(object):
                     rec.rock_ridge.moved_to_cl_dr = fake_dir_rec
                 num_bytes_to_add += self._update_rr_ce_entry(rec)
 
-            self._create_dot(self.pvd, rec, self.rock_ridge, self.xa, file_mode, self.files_date)
+            self._create_dot(self.pvd, rec, self.rock_ridge, self.xa, file_mode, self.files_date, self.keep_date)
 
             parent_file_mode = -1
             if parent.rock_ridge is not None:
@@ -4950,7 +4952,7 @@ class PyCdlib(object):
                     parent_file_mode = file_mode
 
             dotdot = self._create_dotdot(self.pvd, rec, self.rock_ridge,
-                                         relocated, self.xa, parent_file_mode, self.files_date)
+                                         relocated, self.xa, parent_file_mode, self.files_date, self.keep_date)
             if dotdot.rock_ridge is not None and relocated:
                 dotdot.rock_ridge.parent_link = orig_parent
 
@@ -4978,7 +4980,7 @@ class PyCdlib(object):
             num_bytes_to_add += num_new_extents * self.logical_block_size
 
             file_entry = udfmod.UDFFileEntry()
-            file_entry.new(0, 'dir', udf_parent, self.logical_block_size, self.files_date)
+            file_entry.new(0, 'dir', udf_parent, self.logical_block_size, self.files_date, self.keep_date)
             file_ident.file_entry = file_entry
             file_entry.file_ident = file_ident
             num_bytes_to_add += self.logical_block_size

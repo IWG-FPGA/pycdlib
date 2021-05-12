@@ -1108,7 +1108,7 @@ class UDFTimestamp(object):
                            self.centiseconds, self.hundreds_microseconds,
                            self.microseconds)
 
-    def new(self, files_date):
+    def new(self, files_date, keep_date):
         # type: () -> None
         '''
         Create a new UDF Timestamp.
@@ -1528,7 +1528,7 @@ class UDFPrimaryVolumeDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self, files_date, vol_ident):
+    def new(self, files_date, keep_date, vol_ident):
         # type: () -> None
         '''
         Create a new UDF Primary Volume Descriptor.
@@ -1565,7 +1565,7 @@ class UDFPrimaryVolumeDescriptor(object):
         self.app_ident = UDFEntityID()
         self.app_ident.new(0)
         self.recording_date = UDFTimestamp()
-        self.recording_date.new(files_date)
+        self.recording_date.new(files_date, keep_date)
         self.impl_ident = UDFEntityID()
         self.impl_ident.new(0, b'*pycdlib')
         self.implementation_use = b'\x00' * 64  # FIXME: let the user set this
@@ -3515,7 +3515,7 @@ class UDFLogicalVolumeIntegrityDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self, files_date):
+    def new(self, files_date, keep_date):
         # type: () -> None
         '''
         Create a new UDF Logical Volume Integrity Descriptor.
@@ -3532,7 +3532,7 @@ class UDFLogicalVolumeIntegrityDescriptor(object):
         self.desc_tag.new(9)  # FIXME: let the user set serial_number
 
         self.recording_date = UDFTimestamp()
-        self.recording_date.new(files_date)
+        self.recording_date.new(files_date, keep_date)
 
         self.integrity_type = 1  # FIXME: let the user set this
 
@@ -3689,7 +3689,7 @@ class UDFFileSetDescriptor(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self, files_date, vol_ident):
+    def new(self, files_date, keep_date, vol_ident):
         # type: () -> None
         '''
         Create a new UDF File Set Descriptor.
@@ -3706,7 +3706,7 @@ class UDFFileSetDescriptor(object):
         self.desc_tag.new(256)  # FIXME: let the user set serial_number
 
         self.recording_date = UDFTimestamp()
-        self.recording_date.new(files_date)
+        self.recording_date.new(files_date, keep_date)
 
         self.domain_ident = UDFEntityID()
         self.domain_ident.new(0, b'*OSTA UDF Compliant', b'\x02\x01\x03')
@@ -4047,7 +4047,7 @@ class UDFFileEntry(object):
             return self.orig_extent_loc
         return self.new_extent_loc
 
-    def new(self, length, file_type, parent, log_block_size, files_date):
+    def new(self, length, file_type, parent, log_block_size, files_date, keep_date):
         # type: (int, str, Optional[UDFFileEntry], int, datetime) -> None
         '''
         Create a new UDF File Entry.
@@ -4109,13 +4109,13 @@ class UDFFileEntry(object):
                 len_left -= alloc_len
 
         self.access_time = UDFTimestamp()
-        self.access_time.new(files_date)
+        self.access_time.new(files_date, keep_date)
 
         self.mod_time = UDFTimestamp()
-        self.mod_time.new(files_date)
+        self.mod_time.new(files_date, keep_date)
 
         self.attr_time = UDFTimestamp()
-        self.attr_time.new(files_date)
+        self.attr_time.new(files_date, keep_date)
 
         self.extended_attr_icb = UDFLongAD()
         self.extended_attr_icb.new(0, 0)

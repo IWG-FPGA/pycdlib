@@ -417,7 +417,7 @@ class DirectoryRecord(object):
                     raise pycdlibexception.PyCdlibInvalidISO('Dot child of the parent did not have a dot entry; ISO is corrupt')
                 self.parent.children[0].rock_ridge.add_to_file_links()
 
-    def _new(self, vd, name, parent, seqnum, isdir, length, xa, files_date):
+    def _new(self, vd, name, parent, seqnum, isdir, length, xa, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, bytes, Optional[DirectoryRecord], int, bool, int, bool) -> None
         '''
         Internal method to create a new Directory Record.
@@ -535,7 +535,7 @@ class DirectoryRecord(object):
                          0o0120555)
 
     def new_file(self, vd, length, isoname, parent, seqnum, rock_ridge, rr_name,
-                 xa, file_mode, files_date):
+                 xa, file_mode, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, int, bytes, DirectoryRecord, int, str, bytes, bool, int, datetime) -> None
         '''
         Create a new file Directory Record.
@@ -556,12 +556,12 @@ class DirectoryRecord(object):
         if self.initialized:
             raise pycdlibexception.PyCdlibInternalError('Directory Record already initialized')
 
-        self._new(vd, isoname, parent, seqnum, False, length, xa, files_date)
+        self._new(vd, isoname, parent, seqnum, False, length, xa, files_date, keep_date)
         if rock_ridge:
             self._rr_new(rock_ridge, rr_name, b'', False, False, False,
                          file_mode)
 
-    def new_root(self, vd, seqnum, log_block_size, files_date):
+    def new_root(self, vd, seqnum, log_block_size, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, int, int, datetime) -> None
         '''
         Create a new root Directory Record.
@@ -576,10 +576,10 @@ class DirectoryRecord(object):
         if self.initialized:
             raise pycdlibexception.PyCdlibInternalError('Directory Record already initialized')
 
-        self._new(vd, b'\x00', None, seqnum, True, log_block_size, False, files_date)
+        self._new(vd, b'\x00', None, seqnum, True, log_block_size, False, files_date, keep_date)
 
     def new_dot(self, vd, parent, seqnum, rock_ridge, log_block_size, xa,
-                file_mode, files_date):
+                file_mode, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, DirectoryRecord, int, str, int, bool, int) -> None
         '''
         Create a new 'dot' Directory Record.
@@ -598,12 +598,12 @@ class DirectoryRecord(object):
         if self.initialized:
             raise pycdlibexception.PyCdlibInternalError('Directory Record already initialized')
 
-        self._new(vd, b'\x00', parent, seqnum, True, log_block_size, xa, files_date)
+        self._new(vd, b'\x00', parent, seqnum, True, log_block_size, xa, files_date, keep_date)
         if rock_ridge:
             self._rr_new(rock_ridge, b'', b'', False, False, False, file_mode)
 
     def new_dotdot(self, vd, parent, seqnum, rock_ridge, log_block_size,
-                   rr_relocated_parent, xa, file_mode, files_date):
+                   rr_relocated_parent, xa, file_mode, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, DirectoryRecord, int, str, int, bool, bool, int) -> None
         '''
         Create a new 'dotdot' Directory Record.
@@ -623,12 +623,12 @@ class DirectoryRecord(object):
         if self.initialized:
             raise pycdlibexception.PyCdlibInternalError('Directory Record already initialized')
 
-        self._new(vd, b'\x01', parent, seqnum, True, log_block_size, xa, files_date)
+        self._new(vd, b'\x01', parent, seqnum, True, log_block_size, xa, files_date, keep_date)
         if rock_ridge:
             self._rr_new(rock_ridge, b'', b'', False, False, rr_relocated_parent, file_mode)
 
     def new_dir(self, vd, name, parent, seqnum, rock_ridge, rr_name,
-                log_block_size, rr_relocated_child, rr_relocated, xa, file_mode, files_date):
+                log_block_size, rr_relocated_child, rr_relocated, xa, file_mode, files_date, keep_date):
         # type: (headervd.PrimaryOrSupplementaryVD, bytes, DirectoryRecord, int, str, bytes, int, bool, bool, bool, int, datetime) -> None
         '''
         Create a new directory Directory Record.
@@ -651,7 +651,7 @@ class DirectoryRecord(object):
         if self.initialized:
             raise pycdlibexception.PyCdlibInternalError('Directory Record already initialized')
 
-        self._new(vd, name, parent, seqnum, True, log_block_size, xa, files_date)
+        self._new(vd, name, parent, seqnum, True, log_block_size, xa, files_date, keep_date)
         if rock_ridge:
             self._rr_new(rock_ridge, rr_name, b'', rr_relocated_child,
                          rr_relocated, False, file_mode)
@@ -1045,7 +1045,7 @@ class DirectoryRecord(object):
             raise pycdlibexception.PyCdlibInternalError('Directory Record not initialized')
         return self._printable_name
 
-    def record(self, files_date):
+    def record(self, files_date, keep_date):
         # type: () -> bytes
         '''
         Generate the string representing this Directory Record.
@@ -1062,7 +1062,7 @@ class DirectoryRecord(object):
         # record was written, so we make a new date now and use that to
         # write out the record.
         self.date = dates.DirectoryRecordDate()
-        self.date.new(files_date)
+        self.date.new(files_date, keep_date)
 
         padlen = struct.calcsize(self.FMT) + self.len_fi
         padstr = b'\x00' * (padlen % 2)

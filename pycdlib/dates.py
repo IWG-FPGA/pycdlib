@@ -97,7 +97,7 @@ class DirectoryRecordDate(object):
 
         self._initialized = True
 
-    def new(self, files_date):
+    def new(self, files_date=None, keep_date=False):
         # type: () -> None
         '''
         Create a new Directory Record date based on the current time.
